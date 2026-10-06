@@ -103,6 +103,9 @@ function doGet(e) {
   if (action === 'claimSearch') {
     return handleClaimSearch(e.parameter.q);
   }
+  if (action === 'photoWallFeed') {
+    return handlePhotoWallFeed();
+  }
 
   // ค่าเริ่มต้น (ไม่มี action): หน้าเช็คอินสแกน QR ของเดิม
   var template = HtmlService.createTemplateFromFile('index');
@@ -127,6 +130,7 @@ function doPost(e) {
     if (data.action === 'forgotPassword') return handleForgotPassword(data);
     if (data.action === 'resetPassword') return handleResetPassword(data);
     if (data.action === 'changePassword') return handleChangePassword(data);
+    if (data.action === 'photoWallUpload') return handlePhotoWallUpload(data);
     return handleNewRegistration(data);
   } catch (err) {
     return jsonOutput({ result: 'error', message: err.message });
