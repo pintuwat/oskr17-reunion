@@ -131,6 +131,7 @@ function doPost(e) {
     if (data.action === 'resetPassword') return handleResetPassword(data);
     if (data.action === 'changePassword') return handleChangePassword(data);
     if (data.action === 'photoWallUpload') return handlePhotoWallUpload(data);
+    if (data.action === 'vegetarianMeal') return handleVegetarianMeal(data);
     return handleNewRegistration(data);
   } catch (err) {
     return jsonOutput({ result: 'error', message: err.message });
