@@ -121,13 +121,15 @@ function testPhotoWallInstagram() {
   console.log(syncPhotoWallInstagram());
 }
 
-// รันครั้งเดียวจาก Apps Script editor — ตั้ง trigger ให้ sync Instagram ทุก 5 นาที
+// รันครั้งเดียวจาก Apps Script editor — ตั้ง trigger ให้ sync Instagram ทุก 1 นาที
+// ควรเปิดเฉพาะช่วงวันงาน แล้วปิดด้วย removePhotoWallTrigger — รันทุกนาทีทั้งวัน
+// จะใช้โควต้าเวลารัน trigger ของบัญชี Google ฟรี (90 นาที/วัน) ไปเกือบหมด
 function setupPhotoWallTrigger() {
   ScriptApp.getProjectTriggers()
     .filter((t) => t.getHandlerFunction() === 'syncPhotoWallInstagram')
     .forEach((t) => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('syncPhotoWallInstagram').timeBased().everyMinutes(5).create();
-  console.log('ตั้ง trigger syncPhotoWallInstagram ทุก 5 นาทีแล้ว');
+  ScriptApp.newTrigger('syncPhotoWallInstagram').timeBased().everyMinutes(1).create();
+  console.log('ตั้ง trigger syncPhotoWallInstagram ทุก 1 นาทีแล้ว');
 }
 
 // รันหลังจบงาน — หยุด sync Instagram
