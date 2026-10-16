@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>โหวตชุดแต่งกาย — OSKR17</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#21407D">
+<link rel="icon" type="image/png" href="assets/img/logo-17.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+
+<style>
+  :root { --navy: #21407D; --deep: #142850; --pink: #EF4F98; --gold: #FFD84D; --paper: #FFFDF8; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; background: linear-gradient(180deg, var(--navy) 0%, var(--deep) 100%); color: var(--paper); font-family: 'Kanit', sans-serif; }
+  [hidden] { display: none !important; }
+  header { padding: 18px 16px 8px; text-align: center; }
+  header h1 { margin: 0; font-size: 26px; font-weight: 800; }
+  header p { margin: 4px 0 0; opacity: 0.8; font-size: 14px; }
+  .status { margin: 10px 16px; padding: 12px 14px; border-radius: 14px; background: rgba(0, 0, 0, 0.25); font-size: 15px; text-align: center; }
+  .status strong { color: var(--gold); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 8px 16px 120px; }
+  .card { position: relative; border: 3px solid transparent; border-radius: 16px; overflow: hidden; background: rgba(255, 255, 255, 0.08); color: inherit; padding: 0; text-align: left; font: inherit; }
+  .card img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; background: #0E1320; }
+  .card .meta { padding: 8px 10px; font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .no { position: absolute; top: 8px; left: 8px; min-width: 44px; height: 44px; padding: 0 8px; border-radius: 22px; background: var(--pink); display: flex; align-items: center; justify-content: center; font: 700 20px 'JetBrains Mono', monospace; }
+  .card.is-selected { border-color: var(--gold); }
+  .card.is-voted::after { content: '✓ โหวตแล้ว'; position: absolute; top: 8px; right: 8px; background: var(--gold); color: #3B2A00; font-weight: 700; font-size: 13px; padding: 4px 10px; border-radius: 99px; }
+  .card:disabled { opacity: 1; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(14, 19, 32, 0.92); }
+  .bar button { width: 100%; padding: 15px; border: none; border-radius: 14px; background: var(--pink); color: #fff; font: 700 19px 'Kanit', sans-serif; }
+  .bar button:disabled { opacity: 0.55; }
+  .bar .err { color: #FFB4C8; font-size: 14px; text-align: center; margin-top: 6px; min-height: 18px; }
+  .results { padding: 8px 16px 40px; }
+  .r-row { display: flex; align-items: center; gap: 12px; padding: 10px; margin-bottom: 8px; border-radius: 14px; background: rgba(255, 255, 255, 0.08); }
+  .r-row img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; }
+  .r-rank { width: 36px; text-align: center; font-size: 22px; font-weight: 800; color: var(--gold); }
+  .r-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .r-votes { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>👗 โหวตชุดแต่งกาย</h1>
+  <p>OSKR17 Time Machine — เลือกชุดที่ชอบที่สุด 1 เสียง</p>
+</header>
+
+<div class="status" id="status">กำลังโหลด…</div>
+<div class="grid" id="grid"></div>
+<div class="results" id="results" hidden></div>
+
+<div class="bar" id="bar" hidden>
+  <button id="vote-btn" disabled>เลือกผู้เข้าประกวดก่อน</button>
+  <div class="err" id="vote-error"></div>
+</div>
+
+<script src="assets/js/costume-vote.js"></script>
+</body>
+</html>

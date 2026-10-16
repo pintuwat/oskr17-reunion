@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ทีมงาน — ประกวดชุดแต่งกาย</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="assets/img/logo-17.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: { paper: '#FFFDF8', sky: '#CFE9FB', skysoft: '#F1F9FE', ink: '#1B2130', navy: '#21407D', blue: '#2E7FE0', pink: '#EF4F98' },
+        fontFamily: { display: ['"Kanit"', 'sans-serif'], mono: ['"JetBrains Mono"', 'monospace'], thai: ['"Kanit"', 'sans-serif'] },
+      },
+    },
+  };
+</script>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .phase-btn { border-radius: 999px; padding: 0.55rem 1rem; font-weight: 600; font-size: 0.9rem; background: rgba(33, 64, 125, 0.08); color: #21407D; }
+  .phase-btn.is-current { background: #21407D; color: #FFFDF8; }
+  .phase-btn:disabled { opacity: 0.5; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body class="bg-paper text-ink font-thai antialiased">
+
+<main class="max-w-2xl mx-auto px-5 py-8">
+  <p class="font-mono text-pink text-xs tracking-[0.3em] uppercase mb-2">Staff only</p>
+  <h1 class="font-display font-bold text-3xl mb-6">ประกวดชุดแต่งกาย</h1>
+
+  <div id="key-missing" class="form-banner form-banner-error" hidden>
+    ต้องเปิดหน้านี้ด้วยลิงก์ทีมงานที่มี ?key=… (key เดียวกับหน้าโฮสต์ Quiz)
+  </div>
+  <div id="form-banner" class="form-banner form-banner-error" role="alert" hidden></div>
+
+  <section class="rounded-2xl bg-skysoft border border-navy/10 p-4 mb-6">
+    <p class="text-sm text-ink/60 mb-2">สถานะตอนนี้: <strong id="phase-label" class="text-navy">-</strong> · โหวตแล้ว <strong id="total-votes">0</strong> เสียง</p>
+    <div class="flex flex-wrap gap-2">
+      <button class="phase-btn" data-phase="register">รับสมัคร</button>
+      <button class="phase-btn" data-phase="voting">เปิดโหวต</button>
+      <button class="phase-btn" data-phase="closed">ปิดโหวต</button>
+      <button class="phase-btn" data-phase="results">ประกาศผล 🏆</button>
+    </div>
+    <p class="text-xs text-ink/50 mt-3">
+      จอ: <a class="text-blue underline" id="link-side" target="_blank">จอข้าง</a> ·
+      <a class="text-blue underline" id="link-main" target="_blank">จอกลาง</a> ·
+      หน้าโหวต: <a class="text-blue underline" id="link-vote" target="_blank">costume-vote.html</a>
+    </p>
+  </section>
+
+  <section class="mb-8">
+    <h2 class="font-display font-semibold text-xl mb-3">ลงทะเบียนผู้เข้าประกวด</h2>
+    <form id="register-form" novalidate>
+      <div class="form-field">
+        <label class="form-label" for="name">ชื่อ <span class="required">*</span></label>
+        <input class="form-input" type="text" id="name" maxlength="40" placeholder="เช่น ต้น 6/3">
+      </div>
+      <div class="form-field">
+        <label class="form-label">รูปชุด <span class="required">*</span></label>
+        <label for="photo" class="upload-dropzone block">
+          <span class="text-sm text-ink/70">แตะเพื่อถ่ายรูป / เลือกรูป</span>
+        </label>
+        <input type="file" id="photo" accept="image/*" class="hidden">
+        <img id="preview" class="mt-3 max-h-64 rounded-xl border border-navy/10 mx-auto" alt="" hidden>
+      </div>
+      <button type="submit" id="register-btn" class="btn-submit"><span id="register-label">ลงทะเบียน</span></button>
+    </form>
+    <div id="registered" class="mt-4 rounded-2xl bg-pink/10 border border-pink/30 p-5 text-center" hidden>
+      <p class="text-sm text-ink/60">ลงทะเบียนสำเร็จ ได้หมายเลข</p>
+      <p class="font-display font-extrabold text-6xl text-pink" id="registered-no"></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-display font-semibold text-xl">ผู้เข้าประกวด (<span id="count">0</span>)</h2>
+      <button id="refresh-btn" class="text-sm text-blue hover:underline">รีเฟรชรายชื่อจากชีท</button>
+    </div>
+    <p class="text-xs text-ink/50 mb-3">ลบคนที่ลงผิด: พิมพ์ x ในคอลัมน์ Hide ของแท็บ "Costume Contest" แล้วกดรีเฟรชรายชื่อ · คะแนนโหวตเห็นเฉพาะหน้านี้จนกว่าจะประกาศผล</p>
+    <div id="list" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+    <button id="reset-votes-btn" class="mt-8 text-xs text-ink/40 hover:text-pink underline">ล้างคะแนนโหวตทั้งหมด (ใช้หลังทดสอบ)</button>
+  </section>
+</main>
+
+<script src="assets/js/costume-staff.js"></script>
+</body>
+</html>

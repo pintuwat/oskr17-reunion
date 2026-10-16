@@ -109,6 +109,9 @@ function doGet(e) {
   if (action === 'quizState') {
     return handleQuizState();
   }
+  if (action === 'costumeState') {
+    return handleCostumeState();
+  }
 
   // ค่าเริ่มต้น (ไม่มี action): หน้าเช็คอินสแกน QR ของเดิม
   var template = HtmlService.createTemplateFromFile('index');
@@ -138,6 +141,8 @@ function doPost(e) {
     if (data.action === 'quizJoin') return handleQuizJoin(data);
     if (data.action === 'quizAnswer') return handleQuizAnswer(data);
     if (data.action === 'quizHost') return handleQuizHost(data);
+    if (data.action === 'costumeVote') return handleCostumeVote(data);
+    if (data.action === 'costumeStaff') return handleCostumeStaff(data);
     return handleNewRegistration(data);
   } catch (err) {
     return jsonOutput({ result: 'error', message: err.message });

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ประกวดชุดแต่งกาย — OSKR17</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="assets/img/logo-17.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
+<style>
+  :root { --navy: #21407D; --pink: #EF4F98; --gold: #FFD84D; --paper: #FFFDF8; --bg: #0E1320; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--paper); font-family: 'Kanit', sans-serif; cursor: none; }
+  [hidden] { display: none !important; }
+
+  .stage { position: fixed; inset: 0; display: flex; gap: 1vh; padding: 1vh; }
+  .slot { position: relative; flex: 1; min-width: 0; overflow: hidden; border-radius: 1.4vh; background: #161C2C; }
+  .layer { position: absolute; inset: 0; opacity: 0; transition: opacity 1s ease; }
+  .layer.is-active { opacity: 1; }
+  .layer-bg { position: absolute; inset: -8%; background-size: cover; background-position: center; filter: blur(40px) brightness(0.4); }
+  .layer-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .badge {
+    position: absolute; top: 2vh; left: 2vh; min-width: 14vh; height: 14vh; padding: 0 2vh; border-radius: 7vh;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--pink); font: 800 8vh 'JetBrains Mono', monospace; box-shadow: 0 1vh 3vh rgba(0, 0, 0, 0.4);
+  }
+  .name {
+    position: absolute; left: 2vh; right: 2vh; bottom: 2vh; padding: 1.2vh 2.4vh; border-radius: 1.6vh;
+    background: rgba(14, 19, 32, 0.72); font-size: 5vh; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .qr-badge {
+    position: fixed; right: 2.5vh; top: 2.5vh; display: flex; align-items: center; gap: 1.8vh;
+    padding: 1.4vh 1.4vh 1.4vh 2.2vh; border-radius: 1.6vh; background: rgba(14, 19, 32, 0.82); z-index: 5;
+  }
+  .qr-badge .label { font-size: 2.8vh; font-weight: 700; text-align: right; line-height: 1.3; }
+  .qr-badge .label small { display: block; font-size: 2vh; font-weight: 500; color: var(--gold); }
+  .qr { background: #fff; padding: 1vh; border-radius: 1vh; line-height: 0; }
+  .qr img { width: 18vh; height: 18vh; image-rendering: pixelated; }
+
+  .center-msg {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vh;
+    background: radial-gradient(circle at center, #1D2D57 0%, var(--bg) 70%); text-align: center; z-index: 4;
+  }
+  .center-msg h1 { margin: 0; font-size: 8vh; font-weight: 800; }
+  .center-msg p { margin: 0; font-size: 3.4vh; opacity: 0.85; }
+  .center-msg .qr img { width: 30vh; height: 30vh; }
+
+  .results { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; gap: 2.5vh; padding: 3vh 3vw; background: radial-gradient(circle at 50% 30%, #2A4F96 0%, var(--navy) 40%, var(--bg) 100%); z-index: 6; }
+  .results h1 { margin: 0; font-size: 6vh; font-weight: 800; }
+  .podium { display: flex; align-items: flex-end; justify-content: center; gap: 3vw; flex: 1; min-height: 0; width: 100%; }
+  .p-col { display: flex; flex-direction: column; align-items: center; gap: 1vh; width: 26%; min-width: 0; }
+  .p-photo { width: 100%; border-radius: 1.6vh; object-fit: cover; box-shadow: 0 1vh 4vh rgba(0, 0, 0, 0.45); }
+  .p-1 .p-photo { height: 42vh; border: 0.8vh solid var(--gold); }
+  .p-2 .p-photo { height: 34vh; border: 0.6vh solid #D7DCE5; }
+  .p-3 .p-photo { height: 28vh; border: 0.6vh solid #E19A5C; }
+  .p-name { font-size: 3.6vh; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .p-votes { font-size: 2.6vh; color: var(--gold); }
+  .p-medal { font-size: 6vh; line-height: 1; }
+  .rest { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vh 3vw; font-size: 2.8vh; opacity: 0.9; }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage"></div>
+
+<div class="qr-badge" id="qr-badge" hidden>
+  <div class="label"><span id="qr-title">สแกนเพื่อโหวต</span><small id="qr-sub">ชุดที่ชอบที่สุด 1 เสียง</small></div>
+  <div class="qr" data-qr></div>
+</div>
+
+<div class="center-msg" id="empty" hidden>
+  <h1>ประกวดชุดแต่งกาย</h1>
+  <p>รอผู้เข้าประกวด…</p>
+</div>
+
+<div class="results" id="results" hidden>
+  <h1>🏆 ผลการประกวดชุดแต่งกาย</h1>
+  <div class="podium" id="podium"></div>
+  <div class="rest" id="rest"></div>
+</div>
+
+<script src="assets/js/costume-screen.js"></script>
+</body>
+</html>
