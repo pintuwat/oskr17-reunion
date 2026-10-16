@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSKR17 Quiz — Host</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="assets/img/logo-17.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
+<style>
+  :root {
+    --navy: #21407D;
+    --deep: #0E1A36;
+    --pink: #EF4F98;
+    --gold: #FFD84D;
+    --paper: #FFFDF8;
+    --opt1: #E21B3C;
+    --opt2: #1368CE;
+    --opt3: #D89E00;
+    --opt4: #26890C;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: radial-gradient(circle at 30% 20%, #2A4F96 0%, var(--navy) 35%, var(--deep) 100%);
+    color: var(--paper);
+    font-family: 'Kanit', sans-serif;
+  }
+  .screen { position: fixed; inset: 0; display: none; padding: 3.5vh 3vw; }
+  .screen.is-active { display: flex; }
+
+  /* lobby */
+  #screen-lobby { gap: 4vw; align-items: center; }
+  .lobby-left { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2vh; text-align: center; }
+  .brand { font-size: 7vh; font-weight: 800; line-height: 1; }
+  .brand span { color: var(--pink); }
+  .qr { background: #fff; padding: 1.6vh; border-radius: 2vh; line-height: 0; }
+  .qr img { width: 42vh; height: 42vh; image-rendering: pixelated; }
+  .join-url { font-family: 'JetBrains Mono', monospace; font-size: 2.6vh; opacity: 0.85; }
+  .lobby-right { flex: 1; height: 100%; display: flex; flex-direction: column; gap: 2.5vh; min-width: 0; }
+  .player-count { font-size: 9vh; font-weight: 800; line-height: 1; }
+  .player-count small { font-size: 3.5vh; font-weight: 500; opacity: 0.8; }
+  .chips { display: flex; flex-wrap: wrap; gap: 1.2vh; align-content: flex-start; overflow: hidden; flex: 1; }
+  .chip { background: rgba(255, 255, 255, 0.14); padding: 0.8vh 2vh; border-radius: 99px; font-size: 3vh; font-weight: 600; animation: pop 0.35s ease; }
+  @keyframes pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* question / reveal */
+  #screen-question, #screen-reveal { flex-direction: column; gap: 2.5vh; }
+  .q-top { display: flex; align-items: center; justify-content: space-between; font-size: 3.2vh; font-weight: 600; }
+  .q-top .badge { background: rgba(0, 0, 0, 0.25); padding: 0.6vh 2.2vh; border-radius: 99px; }
+  .q-body { flex: 1; display: flex; gap: 3vw; align-items: center; min-height: 0; }
+  .q-text { flex: 1; font-size: 6vh; font-weight: 700; line-height: 1.25; }
+  .q-image { max-height: 40vh; max-width: 35vw; border-radius: 2vh; box-shadow: 0 1vh 4vh rgba(0, 0, 0, 0.35); }
+  .countdown {
+    width: 18vh; height: 18vh; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9vh; font-weight: 800; background: rgba(0, 0, 0, 0.25);
+    border: 0.8vh solid var(--gold); flex-shrink: 0;
+  }
+  .countdown.is-urgent { border-color: var(--opt1); color: #FFB4C8; }
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 2vh; height: 34vh; }
+  .opt {
+    border-radius: 2vh; padding: 0 3vh; display: flex; align-items: center; gap: 2.5vh;
+    font-size: 4.6vh; font-weight: 700; position: relative; overflow: hidden;
+    box-shadow: 0 0.8vh 0 rgba(0, 0, 0, 0.25); transition: opacity 0.3s ease;
+  }
+  .opt .shape { font-size: 5.5vh; }
+  .opt .label { flex: 1; line-height: 1.2; }
+  .opt .count { font-size: 5vh; font-weight: 800; }
+  .opt .bar { position: absolute; left: 0; bottom: 0; height: 1.2vh; background: rgba(255, 255, 255, 0.55); transition: width 0.8s ease; }
+  .opt-1 { background: var(--opt1); }
+  .opt-2 { background: var(--opt2); }
+  .opt-3 { background: var(--opt3); }
+  .opt-4 { background: var(--opt4); }
+  .opt.is-dim { opacity: 0.28; }
+  .opt.is-correct { outline: 0.9vh solid #fff; }
+  .opt.is-correct .label::after { content: '  ✓'; }
+
+  .reveal-wrap { flex: 1; display: flex; gap: 3vw; min-height: 0; }
+  .reveal-main { flex: 1; display: flex; flex-direction: column; gap: 2.5vh; min-width: 0; }
+  .reveal-main .q-text { flex: 0 0 auto; font-size: 4.6vh; }
+  .reveal-main .options { flex: 1; height: auto; }
+  .leaderboard { width: 30vw; background: rgba(0, 0, 0, 0.25); border-radius: 2.5vh; padding: 3vh; display: flex; flex-direction: column; gap: 1.4vh; }
+  .leaderboard h2 { margin: 0 0 1vh; font-size: 4vh; color: var(--gold); }
+  .lb-row { display: flex; align-items: center; gap: 2vh; font-size: 3.2vh; font-weight: 600; background: rgba(255, 255, 255, 0.08); border-radius: 1.4vh; padding: 1vh 2vh; }
+  .lb-row .rank { width: 5vh; text-align: center; font-weight: 800; color: var(--gold); }
+  .lb-row .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-row .pts { font-family: 'JetBrains Mono', monospace; }
+
+  /* end */
+  #screen-end { flex-direction: column; align-items: center; gap: 3vh; }
+  .end-title { font-size: 7vh; font-weight: 800; }
+  .podium { display: flex; align-items: flex-end; gap: 3vw; height: 50vh; }
+  .podium-col { display: flex; flex-direction: column; align-items: center; gap: 1.5vh; width: 22vw; }
+  .podium-name { font-size: 4.4vh; font-weight: 700; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .podium-score { font-family: 'JetBrains Mono', monospace; font-size: 3vh; opacity: 0.85; }
+  .podium-block { width: 100%; border-radius: 2vh 2vh 0 0; display: flex; justify-content: center; padding-top: 2vh; font-size: 9vh; font-weight: 800; }
+  .podium-1 .podium-block { height: 30vh; background: linear-gradient(180deg, #FFD84D, #C99A00); color: #3B2A00; }
+  .podium-2 .podium-block { height: 22vh; background: linear-gradient(180deg, #E4E8EF, #9AA3B2); color: #23293A; }
+  .podium-3 .podium-block { height: 16vh; background: linear-gradient(180deg, #F0A86A, #B5682C); color: #3A1F08; }
+  .end-rest { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5vh 3vw; font-size: 3vh; opacity: 0.9; }
+
+  /* host controls */
+  .controls { position: fixed; right: 2vw; bottom: 2.5vh; display: flex; gap: 1.2vh; z-index: 20; }
+  .controls button {
+    border: none; border-radius: 1.4vh; padding: 1.4vh 3vh; font: 700 2.6vh 'Kanit', sans-serif;
+    background: var(--pink); color: #fff; cursor: pointer; box-shadow: 0 0.6vh 0 rgba(0, 0, 0, 0.25);
+  }
+  .controls button.secondary { background: rgba(255, 255, 255, 0.18); }
+  .controls button:disabled { opacity: 0.5; cursor: default; }
+  .status { position: fixed; left: 2vw; bottom: 2.5vh; font-size: 2vh; opacity: 0.7; z-index: 20; }
+  .key-missing { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3vh; text-align: center; padding: 5vh; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<section class="screen" id="screen-lobby">
+  <div class="lobby-left">
+    <div class="brand">TIME <span>MACHINE</span><br>QUIZ</div>
+    <div class="qr" id="join-qr"></div>
+    <div class="join-url" id="join-url"></div>
+  </div>
+  <div class="lobby-right">
+    <div class="player-count"><span id="lobby-count">0</span> <small>คนเข้าร่วมแล้ว</small></div>
+    <div class="chips" id="lobby-chips"></div>
+  </div>
+</section>
+
+<section class="screen" id="screen-question">
+  <div class="q-top">
+    <span class="badge" id="q-no"></span>
+    <span class="badge" id="q-answered"></span>
+  </div>
+  <div class="q-body">
+    <div class="q-text" id="q-text"></div>
+    <img class="q-image" id="q-image" alt="" hidden>
+    <div class="countdown" id="q-countdown"></div>
+  </div>
+  <div class="options" id="q-options"></div>
+</section>
+
+<section class="screen" id="screen-reveal">
+  <div class="q-top">
+    <span class="badge" id="r-no"></span>
+    <span class="badge" id="r-answered"></span>
+  </div>
+  <div class="reveal-wrap">
+    <div class="reveal-main">
+      <div class="q-text" id="r-text"></div>
+      <div class="options" id="r-options"></div>
+    </div>
+    <div class="leaderboard">
+      <h2>🏆 Top 5</h2>
+      <div id="r-board"></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="screen-end">
+  <div class="end-title">🏆 สรุปผล</div>
+  <div class="podium" id="end-podium"></div>
+  <div class="end-rest" id="end-rest"></div>
+</section>
+
+<div class="key-missing" id="key-missing" hidden>
+  ต้องเปิดหน้านี้ด้วยลิงก์โฮสต์ที่มี ?key=… (ดูได้จาก log ของฟังก์ชัน setupQuiz ใน Apps Script)
+</div>
+
+<div class="status" id="status"></div>
+<div class="controls" id="controls"></div>
+
+<script src="assets/js/quiz-host.js"></script>
+</body>
+</html>

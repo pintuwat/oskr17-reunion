@@ -106,6 +106,9 @@ function doGet(e) {
   if (action === 'photoWallFeed') {
     return handlePhotoWallFeed();
   }
+  if (action === 'quizState') {
+    return handleQuizState();
+  }
 
   // ค่าเริ่มต้น (ไม่มี action): หน้าเช็คอินสแกน QR ของเดิม
   var template = HtmlService.createTemplateFromFile('index');
@@ -132,6 +135,9 @@ function doPost(e) {
     if (data.action === 'changePassword') return handleChangePassword(data);
     if (data.action === 'photoWallUpload') return handlePhotoWallUpload(data);
     if (data.action === 'vegetarianMeal') return handleVegetarianMeal(data);
+    if (data.action === 'quizJoin') return handleQuizJoin(data);
+    if (data.action === 'quizAnswer') return handleQuizAnswer(data);
+    if (data.action === 'quizHost') return handleQuizHost(data);
     return handleNewRegistration(data);
   } catch (err) {
     return jsonOutput({ result: 'error', message: err.message });

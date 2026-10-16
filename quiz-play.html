@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OSKR17 Quiz</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#21407D">
+<link rel="icon" type="image/png" href="assets/img/logo-17.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --navy: #21407D;
+    --deep: #142850;
+    --pink: #EF4F98;
+    --paper: #FFFDF8;
+    --opt1: #E21B3C;
+    --opt2: #1368CE;
+    --opt3: #D89E00;
+    --opt4: #26890C;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: linear-gradient(180deg, var(--navy) 0%, var(--deep) 100%);
+    color: var(--paper);
+    font-family: 'Kanit', sans-serif;
+  }
+  body { min-height: 100dvh; display: flex; flex-direction: column; }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.18);
+  }
+  header .score { color: #FFD84D; }
+  main { flex: 1; display: flex; flex-direction: column; padding: 16px; }
+  .view { flex: 1; display: none; flex-direction: column; }
+  .view.is-active { display: flex; }
+  .center { justify-content: center; align-items: center; text-align: center; gap: 14px; }
+
+  .title { font-size: 34px; font-weight: 800; line-height: 1.1; }
+  .title span { color: var(--pink); }
+  .muted { opacity: 0.75; font-size: 15px; }
+  .big { font-size: 26px; font-weight: 700; }
+  .huge { font-size: 64px; line-height: 1; }
+
+  input[type=text] {
+    width: 100%;
+    max-width: 320px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: none;
+    font: 600 20px 'Kanit', sans-serif;
+    text-align: center;
+  }
+  .btn {
+    width: 100%;
+    max-width: 320px;
+    padding: 14px;
+    border: none;
+    border-radius: 14px;
+    background: var(--pink);
+    color: #fff;
+    font: 700 20px 'Kanit', sans-serif;
+  }
+  .btn:disabled { opacity: 0.6; }
+  .error { color: #FFB4C8; font-size: 15px; min-height: 20px; }
+
+  .q-meta { display: flex; justify-content: space-between; font-size: 15px; opacity: 0.85; margin-bottom: 8px; }
+  .timer { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.2); overflow: hidden; margin-bottom: 12px; }
+  .timer > div { height: 100%; background: #FFD84D; transition: width 0.25s linear; }
+  .q-text { font-size: 18px; font-weight: 600; line-height: 1.35; margin-bottom: 12px; }
+  .q-image { max-width: 100%; max-height: 22vh; border-radius: 12px; align-self: center; margin-bottom: 12px; }
+  .options { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-height: 260px; }
+  .opt {
+    border: none;
+    border-radius: 16px;
+    color: #fff;
+    font: 600 17px 'Kanit', sans-serif;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+    word-break: break-word;
+  }
+  .opt:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
+  .opt .shape { font-size: 28px; line-height: 1; }
+  .opt-1 { background: var(--opt1); }
+  .opt-2 { background: var(--opt2); }
+  .opt-3 { background: var(--opt3); }
+  .opt-4 { background: var(--opt4); }
+  .opt:disabled { opacity: 0.4; }
+
+  .result-correct { background: #26890C; border-radius: 20px; padding: 28px 20px; width: 100%; }
+  .result-wrong { background: #C0183A; border-radius: 20px; padding: 28px 20px; width: 100%; }
+  .result-none { background: rgba(255, 255, 255, 0.12); border-radius: 20px; padding: 28px 20px; width: 100%; }
+  .pill { display: inline-block; padding: 6px 14px; border-radius: 99px; background: rgba(0, 0, 0, 0.25); font-weight: 600; }
+  .spinner {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.25); border-top-color: #fff;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .net-warning {
+    position: fixed; left: 12px; right: 12px; bottom: 12px;
+    background: rgba(0, 0, 0, 0.7); border-radius: 12px; padding: 10px 14px;
+    font-size: 14px; text-align: center; display: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span id="hdr-name">OSKR17 Quiz</span>
+  <span class="score" id="hdr-score"></span>
+</header>
+
+<main>
+  <section class="view center is-active" id="view-loading">
+    <div class="spinner"></div>
+    <p class="muted">กำลังเชื่อมต่อ…</p>
+  </section>
+
+  <section class="view center" id="view-join">
+    <div class="title">TIME <span>MACHINE</span><br>QUIZ</div>
+    <p class="muted">ใส่ชื่อเล่นที่จะแสดงบนจอใหญ่</p>
+    <input type="text" id="nickname" maxlength="20" placeholder="ชื่อเล่น เช่น ต้น 6/3" autocomplete="nickname">
+    <button class="btn" id="join-btn">เข้าร่วมเกม</button>
+    <p class="error" id="join-error"></p>
+  </section>
+
+  <section class="view center" id="view-lobby">
+    <div class="huge">🎉</div>
+    <p class="big">เข้าร่วมแล้ว!</p>
+    <p class="muted">ดูชื่อของคุณบนจอใหญ่<br>รอพิธีกรเริ่มเกม…</p>
+    <button class="pill" id="rename-btn" style="border:none;color:#fff;font:inherit">เปลี่ยนชื่อ</button>
+  </section>
+
+  <section class="view" id="view-question">
+    <div class="q-meta"><span id="q-no"></span><span id="q-seconds"></span></div>
+    <div class="timer"><div id="q-timer"></div></div>
+    <div class="q-text" id="q-text"></div>
+    <img class="q-image" id="q-image" alt="" hidden>
+    <div class="options" id="q-options"></div>
+    <p class="error" id="q-error" style="text-align:center"></p>
+  </section>
+
+  <section class="view center" id="view-answered">
+    <div class="spinner"></div>
+    <p class="big">ส่งคำตอบแล้ว</p>
+    <p class="muted">รอเฉลยบนจอใหญ่…</p>
+  </section>
+
+  <section class="view center" id="view-timeout">
+    <div class="huge">⏰</div>
+    <p class="big">หมดเวลา</p>
+    <p class="muted">รอข้อถัดไป…</p>
+  </section>
+
+  <section class="view center" id="view-reveal">
+    <div id="reveal-box"></div>
+    <p class="muted">รอข้อถัดไป…</p>
+  </section>
+
+  <section class="view center" id="view-end">
+    <div class="huge" id="end-emoji">🏆</div>
+    <p class="big" id="end-rank"></p>
+    <p class="muted" id="end-score"></p>
+    <p class="muted">ขอบคุณที่ร่วมสนุก #oskr17timemachine</p>
+  </section>
+</main>
+
+<div class="net-warning" id="net-warning">สัญญาณเน็ตไม่เสถียร — กำลังเชื่อมต่อใหม่…</div>
+
+<script src="assets/js/quiz-play.js"></script>
+</body>
+</html>
