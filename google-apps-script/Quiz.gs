@@ -78,9 +78,14 @@ function quizValidateQuestions(questions) {
 
 /* ---------------- Player endpoints ---------------- */
 
+// มือถือทุกเครื่อง poll ตรงนี้ — ห้ามแตะ SpreadsheetApp เด็ดขาด (ช้า + ทำให้ request ค้างจนชนลิมิต
+// การรันพร้อมกันของ Apps Script) ถ้า cache หายให้ตอบแบบย่อไปก่อน หน้าโฮสต์จะเติม cache เต็มให้ใน ~2 วิ
 function handleQuizState() {
   let pub = CacheService.getScriptCache().get(QUIZ_PUBLIC_KEY);
-  if (!pub) pub = quizPublish(quizLoadState());
+  if (!pub) {
+    const raw = PropertiesService.getScriptProperties().getProperty('QUIZ_QUESTIONS');
+    pub = JSON.stringify(quizBuildPublic(quizLoadState(), raw ? JSON.parse(raw) : [], false));
+  }
   return ContentService
     .createTextOutput('{"now":' + Date.now() + ',"state":' + pub + '}')
     .setMimeType(ContentService.MimeType.JSON);
@@ -92,8 +97,13 @@ function handleQuizJoin(data) {
   if (!nickname) return jsonOutput({ result: 'error', message: 'กรุณาใส่ชื่อเล่น' });
   if (!/^[\w-]{8,40}$/.test(playerId)) return jsonOutput({ result: 'error', message: 'ข้อมูลผู้เล่นไม่ถูกต้อง' });
 
+  // เก็บใน Script Properties (คีย์ละคน เขียนพร้อมกันได้ ไม่ต้อง lock) แทนการ appendRow ลงชีท —
+  // load test พบว่า appendRow ใช้ ~5 วิ/ครั้ง ทำให้คนกดเข้าร่วมพร้อมกันแล้ว error
   const state = quizLoadState();
-  quizSheet('players').appendRow([new Date(), state.gameId, playerId, nickname]);
+  PropertiesService.getScriptProperties().setProperty(
+    'QP_' + playerId,
+    JSON.stringify({ g: state.gameId, n: nickname, t: Date.now() })
+  );
   return jsonOutput({ result: 'success', gameId: state.gameId });
 }
 
@@ -191,6 +201,7 @@ function quizReveal(state) {
     const sheet = quizSheet('answers');
     sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
   }
+  quizWritePlayersSheet(state.gameId, players);
   return Object.assign({}, state, { phase: 'reveal', counts: counts, answered: rows.length });
 }
 
@@ -205,6 +216,8 @@ function quizFinish(state) {
 }
 
 function quizReset() {
+  const props = PropertiesService.getScriptProperties();
+  props.getKeys().filter((k) => k.indexOf('QP_') === 0).forEach((k) => props.deleteProperty(k));
   ['players', 'answers', 'results'].forEach((k) => quizClearRows(quizSheet(k)));
   return { gameId: Utilities.getUuid().slice(0, 8), phase: 'lobby', q: -1 };
 }
@@ -244,7 +257,12 @@ function quizHostView(state) {
 /* ---------------- Public state (สิ่งที่มือถือเห็น — ไม่มีเฉลยระหว่างคำถาม) ---------------- */
 
 function quizPublish(state) {
-  const questions = quizLoadQuestions();
+  const str = JSON.stringify(quizBuildPublic(state, quizLoadQuestions(), true));
+  CacheService.getScriptCache().put(QUIZ_PUBLIC_KEY, str, QUIZ_CACHE_TTL);
+  return str;
+}
+
+function quizBuildPublic(state, questions, withScores) {
   const pub = { gameId: state.gameId, phase: state.phase, q: state.q, total: questions.length };
   if ((state.phase === 'question' || state.phase === 'reveal') && questions[state.q]) {
     const question = questions[state.q];
@@ -252,8 +270,8 @@ function quizPublish(state) {
     pub.endsAt = state.endsAt;
     pub.duration = state.duration;
   }
-  if (state.phase === 'reveal' || state.phase === 'end') {
-    if (state.phase === 'reveal') pub.correct = questions[state.q].correct;
+  if (state.phase === 'reveal' && questions[state.q]) pub.correct = questions[state.q].correct;
+  if (withScores && (state.phase === 'reveal' || state.phase === 'end')) {
     const board = quizScoreboard(state.gameId, state.phase === 'reveal' ? state.q + 1 : -1);
     pub.top = board.slice(0, 10).map((p) => ({ nickname: p.nickname, score: p.score }));
     pub.playerCount = board.length;
@@ -261,9 +279,7 @@ function quizPublish(state) {
     pub.players = {};
     board.forEach((p) => { pub.players[p.playerId] = [p.score, p.rank, p.lastPoints]; });
   }
-  const str = JSON.stringify(pub);
-  CacheService.getScriptCache().put(QUIZ_PUBLIC_KEY, str, QUIZ_CACHE_TTL);
-  return str;
+  return pub;
 }
 
 function quizScoreboard(gameId, lastQuestionNo) {
@@ -327,15 +343,23 @@ function quizImageUrl(link) {
   return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1600' : s;
 }
 
-// ผู้เล่นของเกมนี้ (ลงทะเบียนซ้ำ/เปลี่ยนชื่อ = ใช้ชื่อล่าสุด)
+// ผู้เล่นของเกมนี้ เรียงตามเวลาเข้าร่วม (เข้าร่วมซ้ำ/เปลี่ยนชื่อ = ใช้ชื่อล่าสุด เพราะคีย์เดียวกัน)
 function quizPlayers(gameId) {
+  const all = PropertiesService.getScriptProperties().getProperties();
+  return Object.keys(all)
+    .filter((k) => k.indexOf('QP_') === 0)
+    .map((k) => ({ playerId: k.slice(3), info: JSON.parse(all[k]) }))
+    .filter((p) => p.info.g === gameId)
+    .sort((a, b) => a.info.t - b.info.t)
+    .map((p) => ({ playerId: p.playerId, nickname: p.info.n, joinedAt: p.info.t }));
+}
+
+function quizWritePlayersSheet(gameId, players) {
   const sheet = quizSheet('players');
-  if (sheet.getLastRow() < 2) return [];
-  const byId = {};
-  sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues().forEach((r) => {
-    if (String(r[1]) === gameId && r[2]) byId[r[2]] = { playerId: String(r[2]), nickname: String(r[3]) };
-  });
-  return Object.keys(byId).map((k) => byId[k]);
+  quizClearRows(sheet);
+  if (players.length) {
+    sheet.getRange(2, 1, players.length, 4).setValues(players.map((p) => [new Date(p.joinedAt), gameId, p.playerId, p.nickname]));
+  }
 }
 
 function quizLiveAnswers(state, players) {

@@ -6,8 +6,9 @@
 
 const QUIZ_PLAY_CONFIG = {
   scriptUrl: 'https://script.google.com/macros/s/AKfycbwe3cldBEPaTPYn102wAOT8Yq2EyqUIqQ1y7_h4Wjvfg9FggSmmHbmpLnaYXHIHcyiG/exec',
-  pollMs: 4000,
-  pollJitterMs: 1000,
+  // 120 เครื่อง × poll ทุก ~7 วิ ≈ 17 request/วินาที — load test ที่ poll ทุก 4 วิ ชนลิมิต Apps Script
+  pollMs: 6000,
+  pollJitterMs: 2000,
   storageKey: 'oskr17_quiz_player',
 };
 const QUIZ_SHAPES = ['▲', '◆', '●', '■'];
@@ -46,13 +47,23 @@ function serverNow() {
   return Date.now() + play.offsetMs;
 }
 
-async function postAction(payload) {
-  const response = await fetch(QUIZ_PLAY_CONFIG.scriptUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload),
-  });
-  return response.json();
+// Apps Script ตอบหน้า HTML error แทน JSON เมื่อมีคนใช้งานพร้อมกันเยอะ — ถือเป็น "ระบบยุ่ง"
+// แล้วลองใหม่อัตโนมัติ (เน็ตหลุด/ระบบยุ่ง เท่านั้น — error จากเซิร์ฟเวอร์ เช่น ปิดรับคำตอบ ไม่ลองซ้ำ)
+async function postAction(payload, attempts = 1) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const response = await fetch(QUIZ_PLAY_CONFIG.scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+      const text = await response.text();
+      return JSON.parse(text);
+    } catch (err) {
+      if (attempt >= attempts) throw new Error('busy');
+      await new Promise((r) => setTimeout(r, 700 * attempt + Math.random() * 800));
+    }
+  }
 }
 
 /* ---------------- Polling ---------------- */
@@ -184,7 +195,7 @@ async function submitAnswer(state, choice) {
       playerId: player.playerId,
       choice,
       elapsedMs: Date.now() - play.shownAt,
-    });
+    }, 4);
     if (result.result === 'success') {
       player.answers[key] = choice;
       savePlayer();
@@ -198,7 +209,7 @@ async function submitAnswer(state, choice) {
       }
     }
   } catch (err) {
-    document.getElementById('q-error').textContent = 'ส่งไม่สำเร็จ (เน็ตสะดุด) — กดตอบอีกครั้ง';
+    document.getElementById('q-error').textContent = 'ส่งไม่สำเร็จ (เน็ตสะดุด/ระบบยุ่ง) — กดตอบอีกครั้ง';
     buttons.forEach((b) => { b.disabled = false; });
   } finally {
     play.sending = false;
@@ -252,7 +263,7 @@ async function join() {
   btn.disabled = true;
   btn.textContent = 'กำลังเข้าร่วม…';
   try {
-    const result = await postAction({ action: 'quizJoin', playerId: player.playerId, nickname });
+    const result = await postAction({ action: 'quizJoin', playerId: player.playerId, nickname }, 5);
     if (result.result !== 'success') throw new Error(result.message);
     player.nickname = nickname;
     player.gameId = result.gameId;
@@ -261,7 +272,9 @@ async function join() {
     show('view-loading');
     poll();
   } catch (err) {
-    errorEl.textContent = err.message || 'เข้าร่วมไม่สำเร็จ ลองอีกครั้ง';
+    errorEl.textContent = err.message === 'busy' || !err.message
+      ? 'ระบบกำลังยุ่ง กดเข้าร่วมอีกครั้งได้เลย'
+      : err.message;
   } finally {
     btn.disabled = false;
     btn.textContent = 'เข้าร่วมเกม';

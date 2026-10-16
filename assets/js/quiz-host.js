@@ -30,7 +30,12 @@ async function hostCall(cmd) {
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action: 'quizHost', key: hostKey, cmd }),
   });
-  const data = await response.json();
+  let data;
+  try {
+    data = JSON.parse(await response.text());
+  } catch (err) {
+    throw new Error('ระบบยุ่ง');
+  }
   if (data.result !== 'success') throw new Error(data.message || 'เกิดข้อผิดพลาด');
   return data;
 }
